@@ -121,13 +121,46 @@ class Dashboard extends React.Component {
     });
   }
 
-  async componentWillReceiveProps(nextProps) {
-    await this.init(nextProps);
+  componentDidMount() {
+    this.init(this.props);
+
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", (accounts) => {
+        if (accounts.length === 0) {
+          this.setState({
+            totalSupply: 0,
+            holders: [],
+            holderTable: [],
+            realHolderTable: [],
+            owner: "",
+            admin: "",
+            loading: true,
+            page: 1,
+          });
+        }
+      });
+    }
   }
 
-  async componentDidMount() {
-    await this.init(this.props);
+  componentDidUpdate(prevProps) {
+    if (prevProps.account && !this.props.account) {
+      this.setState({
+        totalSupply: 0,
+        holders: [],
+        holderTable: [],
+        realHolderTable: [],
+        owner: "",
+        admin: "",
+        loading: true,
+        page: 1,
+      });
+    }
+
+    if (!prevProps.account && this.props.account) {
+      this.init(this.props);
+    }
   }
+
   render() {
     return (
       <Box sx={{ pb: 7 }}>

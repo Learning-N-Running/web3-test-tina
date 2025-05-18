@@ -184,7 +184,10 @@ class Vote extends React.Component {
                             <Box
                               src={
                                 element.source
-                                  ? element.source
+                                  ? element.source.replace(
+                                      "https://vrdao.mypinata.cloud/ipfs/",
+                                      "https://ipfs.io/ipfs/"
+                                    )
                                   : "/images/election.png"
                               }
                               component="img"

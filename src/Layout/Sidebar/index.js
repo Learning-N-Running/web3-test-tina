@@ -26,6 +26,7 @@ import {
   vrtAddress,
   daoABI,
   daoAddress,
+  harmony_mainnet,
 } from "../../Constants/config";
 import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWalletOutlined";
 import { useDispatch } from "react-redux";
@@ -42,6 +43,7 @@ const Menu = (props) => {
   const [account, setAccount] = React.useState("");
   const [position, setPosition] = React.useState("");
   const dispatch = useDispatch();
+  let listenersInitialized = false;
 
   const walletConnect = async () => {
     if (typeof window.ethereum === "undefined") {
@@ -51,70 +53,26 @@ const Menu = (props) => {
       window.open("https://metamask.io/download");
       return;
     }
+
     try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: web3.utils.toHex(1666600000) }],
+      await switchToHarmonyChain();
+      const clientWeb3 = new Web3(web3.ethereum);
+      window.web3 = clientWeb3;
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
       });
-    } catch (switchError) {
-      // This error code indicates that the chain has not been added to MetaMask.
-      if (switchError.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: web3.utils.toHex(1666600000),
-                chainName: "Harmony Mainnet",
-                rpcUrls: ["https://api.harmony.one"],
-                nativeCurrency: {
-                  name: "ONE",
-                  symbol: "ONE", // 2-6 characters long
-                  decimals: 18,
-                },
-                blockExplorerUrls: "https://explorer.harmony.one/",
-              },
-            ],
-          });
-          await window.ethereum.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: web3.utils.toHex(1666600000) }],
-          });
-        } catch (addError) {}
+      const address = accounts[0];
+      setAccount(address);
+      dispatch({ type: "SET_ACCOUNT", payload: address });
+      await getPosition(address);
+
+      if (!listenersInitialized) {
+        setupEthereumListeners();
+        listenersInitialized = true;
       }
+    } catch (error) {
+      console.error(error);
     }
-
-    if (typeof window.ethereum !== "undefined") {
-      window.web3 = new Web3(window.ethereum);
-      await window.ethereum.enable();
-      const clientWeb3 = window.web3;
-      const accounts = await clientWeb3.eth.getAccounts();
-      setAccount(accounts[0]);
-      dispatch({ type: "SET_ACCOUNT", payload: accounts[0] });
-      await getPosition(accounts[0]);
-    } else if (window.web3) {
-      window.web3 = new Web3(window.web3.currentProvider);
-      const clientWeb3 = window.web3;
-      const accounts = await clientWeb3.eth.getAccounts();
-      setAccount(accounts[0]);
-      dispatch({ type: "SET_ACCOUNT", payload: accounts[0] });
-      await getPosition(accounts[0]);
-    }
-
-    const { ethereum } = window;
-    ethereum.on("accountsChanged", async (accounts) => {
-      try {
-        accounts = web3.utils.toChecksumAddress(accounts + "");
-      } catch (err) {}
-      setAccount(accounts);
-    });
-
-    ethereum.on("chainChanged", async (chainId) => {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: web3.utils.toHex(1666600000) }],
-      });
-    });
 
     // this.checkDashBoard(this.state.linkedAccount)
   };
@@ -139,6 +97,53 @@ const Menu = (props) => {
         dispatch({ type: "SET_POSITION", payload: "GUEST" });
       }
     }
+  };
+  const switchToHarmonyChain = async () => {
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: web3.utils.toHex(harmony_mainnet.chainId) }],
+      });
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                ...harmony_mainnet,
+                chainId: web3.utils.toHex(harmony_mainnet.chainId),
+              },
+            ],
+          });
+          await window.ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: web3.utils.toHex(harmony_mainnet.chainId) }],
+          });
+        } catch (addError) {
+          console.error("Failed to add chain:", addError);
+        }
+      } else {
+        console.error("Failed to switch chain:", switchError);
+      }
+    }
+  };
+
+  const setupEthereumListeners = () => {
+    window.ethereum.on("accountsChanged", async (accounts) => {
+      if (accounts.length === 0) {
+        setAccount("");
+      } else {
+        const address = accounts[0];
+        setAccount(address);
+      }
+    });
+    window.ethereum.on("chainChanged", async () => {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: web3.utils.toHex(harmony_mainnet.chainId) }],
+      });
+    });
   };
 
   const handleListItemClick = (event, index) => {

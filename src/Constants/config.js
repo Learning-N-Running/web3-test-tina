@@ -5,6 +5,18 @@ export const pinata_key = "2cb0952b2165aa3a6807";
 export const pinata_secret =
   "8b8279f9f502c8b1a792cf37e95e9ec3ce09b96a7c504d01b8662e8ade908dfa";
 
+export const harmony_mainnet = {
+  chainId: 1666600000,
+  chainName: "Harmony Mainnet",
+  rpcUrls: ["https://api.harmony.one"],
+  nativeCurrency: {
+    name: "ONE",
+    symbol: "ONE", // 2-6 characters long
+    decimals: 18,
+  },
+  blockExplorerUrls: "https://explorer.harmony.one/",
+};
+
 export const vrtABI = [
   {
     inputs: [],
